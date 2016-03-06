@@ -11,11 +11,26 @@ class SimpleDatabase(object):
     def __init__(self):
         self.database = {}
         self.valscount = defaultdict(int)
-        self.changelog = []
+        self.db_history = []
+        self.vals_history = []
+
+    def write(self, dict, key, val=None):
+        if val:
+            dict[key] = val
+        else:
+            del dict[key]
 
     def decrement_valcount(self, key):
         if key in self.database:
-            self.valscount[self.database[key]] -= 1
+            value = self.database[key]
+            if len(self.vals_history) > 0:
+                self.vals_history[0][value] = self.valscount[value]
+            self.valscount[value] -= 1
+
+    def increment_valcount(self, val):
+        if len(self.vals_history) > 0:
+            self.vals_history[0][val] = self.valscount[val]
+        self.valscount[val] += 1
 
     def get(self, key):
         if key in self.database:
@@ -24,30 +39,41 @@ class SimpleDatabase(object):
             print('NULL')
 
     def set(self, key, val):
+        if len(self.db_history) > 0:
+            self.db_history[0][key] = self.database[key] \
+                if key in self.database else None
         self.decrement_valcount(key)
-        self.database[key] = val
-        self.valscount[val] += 1
+        self.write(self.database, key, val)
+        self.increment_valcount(val)
 
     def unset(self, key):
+        if len(self.db_history) > 0:
+            self.db_history[0][key] = self.database[key] \
+                if key in self.database else None
         self.decrement_valcount(key)
-        del self.database[key]
+        self.write(self.database, key)
 
     def numequalto(self, val):
         print(self.valscount[val])
 
     def begin(self):
-        self.changelog.insert(0, (copy(self.database), copy(self.valscount)))
+        self.db_history.insert(0, {})
+        self.vals_history.insert(0, defaultdict(int))
 
     def rollback(self):
-        if len(self.changelog) > 0:
-            self.database, self.valscount = self.changelog[0]
-            self.changelog.pop(0)
+        if len(self.db_history) > 0:
+            db_changes = self.db_history.pop(0)
+            val_changes = self.vals_history.pop(0)
+            for key in db_changes:
+                self.write(self.database, key, db_changes[key])
+            for val in val_changes:
+                self.write(self.valscount, val, val_changes[val])
         else:
             print('NO TRANSACTION')
 
     def commit(self):
-        self.changelog = []
-
+        self.db_history = []
+        self.vals_history = []
 
 database = SimpleDatabase()
 line = sys.stdin.readline().strip()
