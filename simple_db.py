@@ -1,31 +1,55 @@
 import sys
+from copy import copy
 
-LEGAL_COMMANDS = ['BEGIN', 'ROLLBACK', 'COMMIT', 'SET', 'UNSET', 'GET']
+LEGAL_COMMANDS = [
+    'BEGIN', 'ROLLBACK', 'COMMIT', 'SET', 'UNSET', 'GET', 'NUMEQUALTO'
+]
 
 
 class SimpleDatabase(object):
     def __init__(self):
         self.database = {}
+        self.valscount = {}
         self.changelog = []
+
+    def decrement_valcount(self, key):
+        if key in self.database:
+            self.valscount[self.database[key]] -= 1
+
+    def increment_valcount(self, val):
+        if val in self.valscount:
+            self.valscount[val] += 1
+        else:
+            self.valscount[val] = 1
 
     def get(self, key):
         if key in self.database:
-            print(self.database['key'])
+            print(self.database[key])
         else:
             print('NULL')
 
     def set(self, key, val):
+        self.decrement_valcount(key)
         self.database[key] = val
+        self.increment_valcount(val)
 
     def unset(self, key):
+        self.decrement_valcount(key)
         del self.database[key]
 
+    def numequalto(self, val):
+        print(self.valscount[val]) \
+            if val in self.valscount else print(0)
+
     def begin(self):
-        self.changelog.insert(0, self.database)
+        self.changelog.insert(0, (copy(self.database), copy(self.valscount)))
 
     def rollback(self):
-        self.database = self.changelog[0]
-        self.changelog.pop()
+        if len(self.changelog) > 0:
+            self.database, self.valscount = self.changelog[0]
+            self.changelog.pop(0)
+        else:
+            print('NO TRANSACTION')
 
     def commit(self):
         self.changelog = []
