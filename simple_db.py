@@ -1,5 +1,6 @@
 import sys
 from copy import copy
+from collections import defaultdict
 
 LEGAL_COMMANDS = [
     'BEGIN', 'ROLLBACK', 'COMMIT', 'SET', 'UNSET', 'GET', 'NUMEQUALTO'
@@ -9,18 +10,12 @@ LEGAL_COMMANDS = [
 class SimpleDatabase(object):
     def __init__(self):
         self.database = {}
-        self.valscount = {}
+        self.valscount = defaultdict(int)
         self.changelog = []
 
     def decrement_valcount(self, key):
         if key in self.database:
             self.valscount[self.database[key]] -= 1
-
-    def increment_valcount(self, val):
-        if val in self.valscount:
-            self.valscount[val] += 1
-        else:
-            self.valscount[val] = 1
 
     def get(self, key):
         if key in self.database:
@@ -31,15 +26,14 @@ class SimpleDatabase(object):
     def set(self, key, val):
         self.decrement_valcount(key)
         self.database[key] = val
-        self.increment_valcount(val)
+        self.valscount[val] += 1
 
     def unset(self, key):
         self.decrement_valcount(key)
         del self.database[key]
 
     def numequalto(self, val):
-        print(self.valscount[val]) \
-            if val in self.valscount else print(0)
+        print(self.valscount[val])
 
     def begin(self):
         self.changelog.insert(0, (copy(self.database), copy(self.valscount)))
