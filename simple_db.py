@@ -14,23 +14,19 @@ class SimpleDatabase(object):
         self.db_history = []
         self.vals_history = []
 
-    def write(self, dict, key, val=None):
+    def write_db(self, key, val=None):
+        if len(self.db_history) > 0:
+            self.db_history[0][key] = self.database[key] \
+                if key in self.database else None
         if val:
-            dict[key] = val
+            self.database[key] = val
         else:
-            del dict[key]
+            del self.database[key]
 
-    def decrement_valcount(self, key):
-        if key in self.database:
-            value = self.database[key]
-            if len(self.vals_history) > 0:
-                self.vals_history[0][value] = self.valscount[value]
-            self.valscount[value] -= 1
-
-    def increment_valcount(self, val):
+    def update_valcount(self, val, count):
         if len(self.vals_history) > 0:
             self.vals_history[0][val] = self.valscount[val]
-        self.valscount[val] += 1
+        self.valscount[val] = count
 
     def get(self, key):
         if key in self.database:
@@ -39,19 +35,15 @@ class SimpleDatabase(object):
             print('NULL')
 
     def set(self, key, val):
-        if len(self.db_history) > 0:
-            self.db_history[0][key] = self.database[key] \
-                if key in self.database else None
-        self.decrement_valcount(key)
-        self.write(self.database, key, val)
-        self.increment_valcount(val)
+        self.update_valcount(val=self.database[key],
+                             count=self.valscount[self.database[key]] - 1)
+        self.write_db(key, val)
+        self.update_valcount(val=val, count=self.valscount[val] + 1)
 
     def unset(self, key):
-        if len(self.db_history) > 0:
-            self.db_history[0][key] = self.database[key] \
-                if key in self.database else None
-        self.decrement_valcount(key)
-        self.write(self.database, key)
+        self.update_valcount(val=self.database[key],
+                             count=self.valscount[self.database[key]] - 1)
+        self.write_db(key)
 
     def numequalto(self, val):
         print(self.valscount[val])
@@ -65,9 +57,9 @@ class SimpleDatabase(object):
             db_changes = self.db_history.pop(0)
             val_changes = self.vals_history.pop(0)
             for key in db_changes:
-                self.write(self.database, key, db_changes[key])
+                self.write_db(key, db_changes[key])
             for val in val_changes:
-                self.write(self.valscount, val, val_changes[val])
+                self.update_valcount(val=val, count=val_changes[val])
         else:
             print('NO TRANSACTION')
 
